@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Расписание</title>
+<style>
+:root{--bg:#000;--t:#19E3CF;--t2:rgba(25,227,207,.55);--line:rgba(25,227,207,.28)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--t)}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4;min-height:100vh;
+  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+main{max-width:30rem;margin:0 auto;padding:1.5rem 1.25rem 3rem}
+.day{color:var(--t2);font-size:.95rem;margin:0 0 1.5rem}
+.state{color:var(--t2);font-size:1rem;margin-bottom:.4rem}
+.title{font-size:clamp(1.6rem,7vw,2.2rem);font-weight:700;letter-spacing:-.01em;line-height:1.15;overflow-wrap:anywhere}
+.meta{color:var(--t2);margin:.5rem 0 1.5rem}
+.times{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;font-size:1.1rem;margin:.6rem 0 0}
+.big{font-size:clamp(2.6rem,13vw,3.6rem);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
+.line{display:flex;align-items:center;gap:.75rem;font-variant-numeric:tabular-nums;font-size:1.1rem;margin:.9rem 0 0}
+.line span{min-width:3.2rem;flex:none}
+.line span:last-child{text-align:right}
+.bar{position:relative;flex:1;min-width:0;height:2.1rem;border:2px solid var(--t2);border-radius:999px;overflow:hidden;
+  box-shadow:0 0 10px rgba(25,227,207,.25),inset 0 0 8px rgba(25,227,207,.12)}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='36' viewBox='0 0 60 36' preserveAspectRatio='none'%3E%3Cpath fill='%2319E3CF' d='M0 8Q15 2 30 8T60 8V28Q45 34 30 28T0 28Z'/%3E%3C/svg%3E") repeat-x 0 0/60px 100%;
+  filter:drop-shadow(0 0 4px rgba(25,227,207,.8));animation:wave 1.6s linear infinite}
+.ring{position:absolute;top:50%;left:0;width:1.4rem;height:1.4rem;margin-top:-.7rem;border:3px solid var(--t);border-radius:50%;background:#000;
+  box-shadow:0 0 6px rgba(25,227,207,.5)}
+@keyframes wave{to{background-position-x:60px}}
+@media (prefers-reduced-motion:reduce){.fill{animation:none}}
+h2{font-size:1rem;font-weight:500;color:var(--t2);margin:2.5rem 0 .6rem}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:grid;grid-template-columns:5.2rem 1fr;gap:.75rem;padding:.75rem .6rem;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.list li.now{background:var(--t);color:#000;border-radius:.4rem;border-top-color:transparent}
+.list .n{font-weight:500;overflow-wrap:anywhere}
+.list .r{font-size:.9rem;opacity:.7}
+button{font:inherit;color:var(--t);background:transparent;border:1px solid var(--t);border-radius:999px;padding:.5rem 1.1rem;min-height:2.75rem;margin:.6rem .5rem 0 0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--t);outline-offset:3px}
+.nav{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:2.25rem}
+.nav button{margin:0;min-width:2.75rem}
+.nav button.on{background:var(--t);color:#000}
+</style>
+</head>
+<body>
+<main>
+  <p class="day" id="day"></p>
+  <section id="hero" aria-live="polite"></section>
+  <div class="nav">
+    <button type="button" id="prev" aria-label="Предыдущий день">‹</button>
+    <button type="button" id="tod">Сегодня</button>
+    <button type="button" id="tom">Завтра</button>
+    <button type="button" id="nextd" aria-label="Следующий день">›</button>
+  </div>
+  <h2 id="lh"></h2>
+  <ul class="list" id="list"></ul>
+
+</main>
+
+<script>
+(function(){
+  var STD=[["08:00","09:30"],["09:45","11:15"],["11:30","13:00"],["13:15","14:45"],["15:00","16:30"],["16:45","18:15"]];
+  var BELLS={
+    1:[["08:50","10:20"],["10:35","12:05"],["12:20","13:50"],["14:25","15:55"],["16:10","17:40"],["17:50","19:20"]],
+    2:[["08:00","09:30"],["09:45","11:15"],["11:30","13:00"],["14:25","15:55"],["16:10","17:40"],["17:50","19:20"]],
+    3:STD,4:STD,5:STD,6:STD
+  };
+  var BASE={
+    "2026-10-02":[
+      {pair:3,name:"Математические методы решения пр…",type:"практ. занятие",room:"А-6",teacher:"Борисова Э.М."},
+      {pair:4,name:"Выполнение полевых и камеральны…",type:"лекция",room:"А-3",teacher:"Николаева С.И."},
+      {pair:5,name:"Физическая культура",type:"",room:"Б-12а",teacher:"Щурова Е.В."}],
+    "2026-10-03":[
+      {pair:2,name:"Выполнение полевых и камеральны…",type:"",room:"А-3",teacher:"Николаева С.И."},
+      {pair:3,name:"Инженерная графика",type:"",room:"А-3",teacher:"Николаева С.И."},
+      {pair:4,name:"Основы геологии, геоморфологии, п…",type:"лекция",room:"А-9",teacher:"Байцур С.А."}],
+    "2026-10-05":[{"pair":2,"name":"Основы геологии, геоморфологии, п…","type":"","room":"А-9","teacher":"Байцур С.А."},{"pair":3,"name":"Математические методы решения пр…","type":"","room":"А-1","teacher":"Борисова Э.М."},{"pair":4,"name":"Выполнение полевых и камеральны…","type":"","room":"А-3","teacher":"Николаева С.И."}],
+    "2026-10-06":[{"pair":4,"name":"Выполнение полевых и камеральны…","type":"","room":"А-3","teacher":"Николаева С.И."},{"pair":5,"name":"Выполнение топографических съемо…","type":"","room":"А-3","teacher":"Николаева С.И."},{"pair":6,"name":"Иностранный язык в профессиональ…","type":"","room":"А-2","teacher":"Мальсагова А.А."}],
+    "2026-10-07":[{"pair":2,"name":"Основы геологии, геоморфологии, п…","type":"","room":"А-6","teacher":"Байцур С.А."},{"pair":3,"name":"Инженерная графика","type":"лекция","room":"А-3","teacher":"Николаева С.И."},{"pair":4,"name":"Математические методы решения пр…","type":"","room":"А-1","teacher":"Борисова Э.М."}],
+    "2026-10-08":[{"pair":3,"name":"Инженерная графика","type":"практ. занятие","room":"А-3","teacher":"Николаева С.И."},{"pair":4,"name":"Математические методы решения пр…","type":"","room":"А-1","teacher":"Борисова Э.М."},{"pair":5,"name":"Выполнение полевых и камеральны…","type":"","room":"А-3","teacher":"Николаева С.И."}],
+    "2026-10-09":[{"pair":2,"name":"Математические методы решения пр…","type":"","room":"А-1","teacher":"Борисова Э.М."},{"pair":3,"name":"Основы геологии, геоморфологии, п…","type":"","room":"А-2","teacher":"Байцур С.А."},{"pair":4,"name":"Выполнение топографических съемо…","type":"","room":"А-3","teacher":"Николаева С.И."}],
+    "2026-10-10":[{"pair":2,"name":"Основы геологии, геоморфологии, п…","type":"","room":"А-5","teacher":"Байцур С.А."},{"pair":3,"name":"Выполнение полевых и камеральны…","type":"","room":"А-3","teacher":"Николаева С.И."},{"pair":4,"name":"Выполнение полевых и камеральны…","type":"","room":"А-3","teacher":"Николаева С.И."}]
+  };
+  var DAYS=["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];
+  var MONTHS=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  var $=function(i){return document.getElementById(i)};
+  var off=0;
+  function data(){return BASE}
+  function key(d){var m=d.getMonth()+1,x=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(x<10?"0":"")+x}
+  function mins(s){var p=s.split(":");return +p[0]*60+ +p[1]}
+  function pad(n){return n<10?"0"+n:""+n}
+  function hms(sec){sec=Math.max(0,Math.round(sec));var h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;
+    return (h?h+":"+pad(m):m)+":"+pad(s)}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  function lessonsOn(d,all){
+    var b=BELLS[d.getDay()];if(!b)return [];
+    var L=(all[key(d)]||[]).slice().sort(function(a,c){return a.pair-c.pair});
+    return L.filter(function(l){return (l.start&&l.end)||b[l.pair-1]}).map(function(l){
+      var t=(l.start&&l.end)?[l.start,l.end]:b[l.pair-1];
+      return {l:l,s:mins(t[0]),e:mins(t[1]),st:t[0],en:t[1]}}).sort(function(a,c){return a.s-c.s});
+  }
+  function fmtT(m){m=Math.round(m);return pad(Math.floor(m/60))+":"+pad(m%60)}
+  function barRow(a,b,p){return '<div class="line"><span>'+a+'</span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(p)+'"><div class="fill" id="fill"></div><i class="ring" id="ring"></i></div><span>'+b+'</span></div>'}
+  function setBar(p){$("fill").style.width=p+"%";$("ring").style.left="calc("+p+"% - "+(p/100*1.4)+"rem)"}
+  function meta(l){return ["ауд. "+l.room,l.teacher,l.type].filter(Boolean).map(esc).join(" · ")}
+  function render(){
+    var now=new Date(),all=data(),today=lessonsOn(now,all);
+    var nm=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+    $("day").textContent=DAYS[now.getDay()].replace(/^./,function(c){return c.toUpperCase()})+", "+now.getDate()+" "+MONTHS[now.getMonth()];
+    var cur=null,next=null,i;
+    for(i=0;i<today.length;i++){
+      if(nm>=today[i].s&&nm<today[i].e){cur=today[i];break}
+      if(nm<today[i].s){next=today[i];break}
+    }
+    var html="";
+    if(cur){
+      var pct=(nm-cur.s)/(cur.e-cur.s)*100;
+      html='<div class="state">Идёт пара · пары начались в '+today[0].st+'</div><div class="title">'+esc(cur.l.name)+'</div><div class="meta">'+meta(cur.l)+'</div>'
+        +'<div class="state" style="margin-top:1.25rem">До конца пары</div><div class="big" id="left"></div>'
+        +barRow(cur.st,cur.en,pct);
+      $("hero").innerHTML=html;
+      setBar(pct);
+      $("left").textContent=hms((cur.e-nm)*60);
+    }else{
+      var nx=next,when="",label="";
+      if(!nx){
+        for(i=1;i<=21&&!nx;i++){var d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i);var ls=lessonsOn(d,all);
+          if(ls.length){nx=ls[0];when=i===1?"Завтра":DAYS[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()]}}
+      }
+      if(next){label=today.indexOf(next)===0?"Пары начинаются в "+next.st:"Перемена"}
+      else if(today.length){label="Пары на сегодня закончились"}
+      else{label=BELLS[now.getDay()]?"Сегодня пар нет":"Сегодня выходной"}
+      html='<div class="state">'+label+'</div>';
+      var bp=0,hasBar=false;
+      if(next){html+='<div class="state" style="margin-top:1rem">До начала пары</div><div class="big" id="left"></div>'}
+      if(nx){
+        html+='<div class="state" style="margin-top:1.5rem">Следующая пара'+(when?" · "+esc(when):"")+'</div><div class="title">'+esc(nx.l.name)+'</div><div class="meta" style="margin-bottom:0">'+meta(nx.l)+' · '+nx.st+'–'+nx.en+'</div>';
+        if(next){
+          var ix=today.indexOf(next),pv=ix>0?today[ix-1]:null;
+          if(pv){
+            bp=Math.max(0,Math.min(100,(nm-pv.e)/(next.s-pv.e)*100));
+            html+=barRow(pv.en,next.st,bp);
+            hasBar=true;
+          }
+        }
+      }else{html+='<div class="meta">Расписание на ближайшие недели не добавлено.</div>'}
+      $("hero").innerHTML=html;
+      if(next){$("left").textContent=hms((next.s-nm)*60);if(hasBar)setBar(bp)}
+    }
+    var sd=new Date(now.getFullYear(),now.getMonth(),now.getDate()+off);
+    var shown=off===0?today:lessonsOn(sd,all);
+    var nmn={"-1":"Вчера","0":"Сегодня","1":"Завтра"}[off];
+    $("lh").textContent=(nmn?nmn+" · ":"")+DAYS[sd.getDay()]+", "+sd.getDate()+" "+MONTHS[sd.getMonth()];
+    $("tod").className=off===0?"on":"";$("tom").className=off===1?"on":"";
+    $("list").innerHTML=shown.length?shown.map(function(x){
+      return '<li'+(cur===x&&off===0?' class="now"':'')+'><div>'+x.st+' – '+x.en+'</div><div><div class="n">'+esc(x.l.name)+'</div><div class="r">'+meta(x.l)+'</div></div></li>'}).join(""):'<li><div></div><div class="r">'+(BELLS[sd.getDay()]?"Нет пар":"Выходной")+'</div></li>';
+  }
+  function go(n){off=Math.max(-60,Math.min(60,n));render()}
+  $("prev").addEventListener("click",function(){go(off-1)});
+  $("nextd").addEventListener("click",function(){go(off+1)});
+  $("tod").addEventListener("click",function(){go(0)});
+  $("tom").addEventListener("click",function(){go(1)});
+  render();setInterval(render,1000);
+})();
+</script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+</script>
+</body>
+</html>
